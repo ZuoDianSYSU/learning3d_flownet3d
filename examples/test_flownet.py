@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-sys.path.append('/home/cui/workspace/deepLearning/learning3d/')
+sys.path.append('/mnt/sdb2/Zuodian/code/learning3d_flownet3d/')
 print(sys.path)
 import open3d as o3d
 import os
@@ -30,6 +30,8 @@ def display_open3d(template, source, transformed_source):
     template_.paint_uniform_color([1, 0, 0])
     source_.paint_uniform_color([0, 1, 0])
     transformed_source_.paint_uniform_color([0, 0, 1])
+    o3d.visualization.draw_geometries([template_])
+    o3d.visualization.draw_geometries([template_, source_])
     o3d.visualization.draw_geometries([template_, source_, transformed_source_])
 
 def test_one_epoch(args, net, test_loader):
@@ -53,12 +55,39 @@ def test_one_epoch(args, net, test_loader):
         loss_1 = torch.mean(mask1 * torch.sum((flow_pred - flow) * (flow_pred - flow), -1) / 2.0)
 
         pc1, pc2 = pc1.permute(0,2,1), pc2.permute(0,2,1)
-        pc1_ = pc1 - flow_pred
+        pc1_ = pc1 + flow_pred
         print("Loss: ", loss_1)
-        display_open3d(pc1.detach().cpu().numpy()[0], pc2.detach().cpu().numpy()[0], pc1_.detach().cpu().numpy()[0])
+        rate_calc(pc1, pc2, flow_pred)
+        # display_open3d(pc1.detach().cpu().numpy()[0], pc2.detach().cpu().numpy()[0], pc1_.detach().cpu().numpy()[0])
         total_loss += loss_1.item() * batch_size        
 
     return total_loss * 1.0 / num_examples
+
+
+def rate_calc(pc1, pc2, flow_pred):
+    res = pc2 - (pc1+flow_pred)
+    pc1 = pc1.tolist()[0]
+    pc2 = pc2.tolist()[0]
+    flow_pred = flow_pred.tolist()[0]
+    res = res.tolist()[0]
+    # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(pc1)
+    o3d.io.write_point_cloud("/mnt/sdb2/Zuodian/code/learning3d_flownet3d/results/pc1.ply", pcd)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(pc2)
+    o3d.io.write_point_cloud("/mnt/sdb2/Zuodian/code/learning3d_flownet3d/results/pc2.ply", pcd)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(flow_pred)
+    o3d.io.write_point_cloud("/mnt/sdb2/Zuodian/code/learning3d_flownet3d/results/flow_pred.ply", pcd)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(res)
+    o3d.io.write_point_cloud("/mnt/sdb2/Zuodian/code/learning3d_flownet3d/results/res.ply", pcd)
+
+    debug = 1
 
 
 def test(args, net, test_loader):
@@ -84,7 +113,7 @@ def main():
                         help='dataset to use')
     parser.add_argument('--dataset_path', type=str, default='data/', metavar='N',
                         help='dataset to use')
-    parser.add_argument('--pretrained', type=str, default='pretrained/exp_flownet/models/model.best.t7', metavar='N',
+    parser.add_argument('--pretrained', type=str, default='/mnt/sdb2/Zuodian/code/learning3d_flownet3d/pretrained/exp_flownet/models/model.best.t7', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--device', default='cuda:0', type=str,
                         metavar='DEVICE', help='use CUDA if available')

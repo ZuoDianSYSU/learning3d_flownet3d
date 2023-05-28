@@ -3,6 +3,8 @@
 
 
 from __future__ import print_function
+import sys
+sys.path.append("/mnt/sdb2/Zuodian/code/learning3d_flownet3d") 
 import os
 import gc
 import argparse
@@ -11,8 +13,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
-from learning3d.models import FlowNet3D
-from learning3d.data_utils import SceneflowDataset
+from models import FlowNet3D
+from data_utils import SceneflowDataset
 import numpy as np
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
@@ -100,6 +102,14 @@ def train_one_epoch(args, net, train_loader, opt):
 
         opt.step()
         total_loss += loss_1.item() * batch_size
+        print(loss_1.item())
+        print(batch_size)
+        if str(loss_1.item()) == 'nan':
+            print(loss_1.item())
+            print(batch_size)
+            assert ValueError("loss是nan")
+    print("total_loss: %f" % total_loss)
+    print("num_examples: %d" % num_examples)
 
         # if (i+1) % 100 == 0:
         #     print("batch: %d, mean loss: %f" % (i, total_loss / 100 / batch_size))
